@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.mrntlu.recyclerviewguide.R
@@ -14,6 +15,11 @@ import com.mrntlu.recyclerviewguide.databinding.FragmentMainBinding
 import com.mrntlu.recyclerviewguide.interfaces.Interaction
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
 import com.mrntlu.recyclerviewguide.ui.BaseFragment
+import com.mrntlu.recyclerviewguide.utils.RVState
+import com.mrntlu.recyclerviewguide.utils.RecyclerViewEnum
+import com.mrntlu.recyclerviewguide.utils.printLog
+import kotlinx.coroutines.*
+import java.util.UUID
 
 class MainFragment : BaseFragment<FragmentMainBinding>() {
 
@@ -22,18 +28,18 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
     }
 
     private lateinit var viewModel: MainViewModel
-    private val tempList = listOf(
-        RecyclerViewModel(1, "Text 1", 0),
-        RecyclerViewModel(2, "Text 2", 1),
-        RecyclerViewModel(3, "Text 3", 2),
-        RecyclerViewModel(4, "Text 4", 3),
-        RecyclerViewModel(5, "Text 5", 4),
-        RecyclerViewModel(6, "Text 6", 5),
-        RecyclerViewModel(7, "Text 7", 6),
-        RecyclerViewModel(8, "Text 8", 7),
-        RecyclerViewModel(9, "Text 9", 8),
-        RecyclerViewModel(10, "Text 10", 9),
-        RecyclerViewModel(11, "Text 11", 10),
+    private val tempList = mutableListOf<RecyclerViewModel>(
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
+        RecyclerViewModel(UUID.randomUUID().toString()),
     )
     private var recyclerViewAdapter: RecyclerViewAdapter? = null
 
@@ -59,19 +65,75 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
     private fun setListeners() {
         binding.errorButton.setOnClickListener {
-
+            recyclerViewAdapter?.setData(RVState.Error("Custom error message"))
         }
 
         binding.appendButton.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                recyclerViewAdapter?.setData(RVState.View(
+                    tempList,
+                    RecyclerViewEnum.PaginationLoading,
+                ))
 
+                delay(3000L)
+
+                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
+
+                recyclerViewAdapter?.setData(RVState.View(
+                    tempList,
+                    RecyclerViewEnum.View,
+                ))
+
+                binding.mainRV.scrollToPosition(tempList.size - 1)
+            }
         }
 
         binding.prependButton.setOnClickListener {
+            tempList.add(0, RecyclerViewModel(UUID.randomUUID().toString()))
 
+            recyclerViewAdapter?.setData(RVState.View(
+                tempList,
+                recyclerViewAdapter!!.rvState.rvEnum,
+            ))
+
+            binding.mainRV.scrollToPosition(0)
         }
 
-        binding.exhaustButton.setOnClickListener {
+        binding.loadingButton.setOnClickListener {
+            recyclerViewAdapter?.setData(RVState.Loading)
+        }
 
+        binding.insertButton.setOnClickListener {
+            tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
+
+            recyclerViewAdapter?.setData(RVState.View(
+                tempList,
+                recyclerViewAdapter!!.rvState.rvEnum,
+            ))
+
+            binding.mainRV.scrollToPosition(tempList.size - 1)
+        }
+
+        binding.paginateErrorButton.setOnClickListener {
+            recyclerViewAdapter?.setData(RVState.View(
+                tempList,
+                RecyclerViewEnum.PaginationError,
+            ))
+        }
+
+        binding.clearButton.setOnClickListener {
+            tempList.clear()
+            recyclerViewAdapter?.setData(RVState.View(
+                tempList,
+                recyclerViewAdapter!!.rvState.rvEnum,
+            ))
+        }
+
+        binding.viewButton.setOnClickListener {
+            recyclerViewAdapter?.setData(RVState.View(
+                tempList,
+                RecyclerViewEnum.View,
+            ))
         }
     }
 
@@ -82,7 +144,22 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
             addItemDecoration(DividerItemDecoration(context, linearLayoutManager.orientation))
             recyclerViewAdapter = RecyclerViewAdapter(object: Interaction<RecyclerViewModel> {
                 override fun onItemSelected(position: Int, item: RecyclerViewModel) {
-                    TODO("Not yet implemented")
+                    tempList.remove(item)
+
+                    recyclerViewAdapter?.setData(RVState.View(
+                        tempList,
+                        recyclerViewAdapter!!.rvState.rvEnum,
+                    ))
+                }
+
+                override fun onLongPressed(position: Int, item: RecyclerViewModel) {
+                    item.id = "Test ID"
+                    tempList[position] = item
+
+                    recyclerViewAdapter?.setData(RVState.View(
+                        tempList,
+                        recyclerViewAdapter!!.rvState.rvEnum,
+                    ))
                 }
 
                 override fun onErrorRefreshPressed() {
@@ -90,6 +167,10 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                 }
             })
             adapter = recyclerViewAdapter
+            recyclerViewAdapter?.setData(RVState.View(
+                tempList,
+                RecyclerViewEnum.View,
+            ))
         }
     }
 }

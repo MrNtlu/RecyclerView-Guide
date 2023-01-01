@@ -1,7 +1,8 @@
 package com.mrntlu.recyclerviewguide.models
 
 data class RecyclerViewModel(
-    val id: Int,
-    var text: String,
-    val order: Int,
-)
+    var id: String,
+) {
+    val text: String
+        get() = "ID: $id"
+}

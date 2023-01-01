@@ -11,7 +11,7 @@
         android:id="@+id/mainRV"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/errorButton"
+        app:layout_constraintBottom_toTopOf="@+id/insertButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -53,19 +53,63 @@
         android:textAllCaps="false"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="@+id/appendButton"
-        app:layout_constraintEnd_toStartOf="@+id/exhaustButton"
+        app:layout_constraintEnd_toStartOf="@+id/loadingButton"
         app:layout_constraintStart_toEndOf="@+id/appendButton" />
 
     <Button
-        android:id="@+id/exhaustButton"
+        android:id="@+id/loadingButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="3dp"
         android:layout_marginEnd="3dp"
-        android:text="Exhaust"
+        android:text="Loading"
         android:textAllCaps="false"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="@+id/prependButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/prependButton" />
+
+    <Button
+        android:id="@+id/insertButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="Insert"
+        android:textAllCaps="false"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toTopOf="@+id/errorButton"
+        app:layout_constraintStart_toStartOf="@+id/errorButton" />
+
+    <Button
+        android:id="@+id/paginateErrorButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="P Error"
+        android:textAllCaps="false"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toTopOf="@+id/errorButton"
+        app:layout_constraintStart_toStartOf="@+id/appendButton" />
+
+    <Button
+        android:id="@+id/clearButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="Clear All"
+        android:textAllCaps="false"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toTopOf="@+id/prependButton"
+        app:layout_constraintStart_toStartOf="@+id/prependButton" />
+
+    <Button
+        android:id="@+id/viewButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:text="View"
+        android:textAllCaps="false"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toTopOf="@+id/loadingButton"
+        app:layout_constraintStart_toStartOf="@+id/loadingButton" />
 </androidx.constraintlayout.widget.ConstraintLayout>
