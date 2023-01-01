@@ -11,11 +11,9 @@ import com.mrntlu.recyclerviewguide.adapters.viewholders.*
 import com.mrntlu.recyclerviewguide.databinding.*
 import com.mrntlu.recyclerviewguide.interfaces.Interaction
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
-import com.mrntlu.recyclerviewguide.utils.RecyclerViewDiffUtilCallBack
-import com.mrntlu.recyclerviewguide.utils.RecyclerViewEnum
-import com.mrntlu.recyclerviewguide.utils.RVState
-import com.mrntlu.recyclerviewguide.utils.printLog
+import com.mrntlu.recyclerviewguide.utils.*
 
+@Suppress("UNCHECKED_CAST")
 class RecyclerViewAdapter(
     override val interaction: Interaction<RecyclerViewModel>
 ): BaseAdapter<RecyclerViewModel>(interaction) {
@@ -34,7 +32,7 @@ class RecyclerViewAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when(holder) {
             is ItemViewHolder -> {
-                val item = (rvState as RVState.View).list[holder.adapterPosition]
+                val item = (rvState as DataHolderState<RecyclerViewModel>).list[holder.adapterPosition]
 
                 val text = "Position: ${holder.adapterPosition} ${item.text}"
                 holder.binding.itemTV.text = text
@@ -74,22 +72,43 @@ class RecyclerViewAdapter(
             is ErrorItemViewHolder -> {
                 holder.binding.errorText.text = (rvState as RVState.Error).message
             }
+            is PaginationErrorViewHolder -> {
+                holder.binding.textView3.text = (rvState as RVState.View).paginationErrorMessage
+            }
         }
     }
 
     override fun handleDiffUtil(newState: RVState<RecyclerViewModel>) {
-        if ((newState as RVState.View).list.isEmpty()) {
+        if (newState is RVState.View && newState.list.isEmpty()) {
             rvState = RVState.Empty
             notifyDataSetChanged()
         } else {
             val diffUtil = RecyclerViewDiffUtilCallBack(
-                (rvState as RVState.View).list,
-                (newState as RVState.View).list,
+                (rvState as DataHolderState<RecyclerViewModel>).list,
+                (newState as DataHolderState<RecyclerViewModel>).list,
             )
             val diffResults = DiffUtil.calculateDiff(diffUtil, true)
 
-            (rvState as RVState.View).list = newState.list.toList()
+            (rvState as DataHolderState<RecyclerViewModel>).list = newState.list.toList()
 
+            diffResults.dispatchUpdatesTo(object: ListUpdateCallback{
+                override fun onInserted(position: Int, count: Int) {
+                    printLog("Insert $count")
+                }
+
+                override fun onRemoved(position: Int, count: Int) {
+                    printLog("Removed $count")
+                }
+
+                override fun onMoved(fromPosition: Int, toPosition: Int) {
+                    printLog("Moved")
+                }
+
+                override fun onChanged(position: Int, count: Int, payload: Any?) {
+                    printLog("Changed $count")
+                }
+
+            })
             diffResults.dispatchUpdatesTo(this)
         }
     }

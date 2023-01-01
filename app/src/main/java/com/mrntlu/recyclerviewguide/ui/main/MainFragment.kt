@@ -15,6 +15,7 @@ import com.mrntlu.recyclerviewguide.databinding.FragmentMainBinding
 import com.mrntlu.recyclerviewguide.interfaces.Interaction
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
 import com.mrntlu.recyclerviewguide.ui.BaseFragment
+import com.mrntlu.recyclerviewguide.utils.CUDOperations
 import com.mrntlu.recyclerviewguide.utils.RVState
 import com.mrntlu.recyclerviewguide.utils.RecyclerViewEnum
 import com.mrntlu.recyclerviewguide.utils.printLog
@@ -70,18 +71,24 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
         binding.appendButton.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                recyclerViewAdapter?.setData(RVState.View(
-                    tempList,
-                    RecyclerViewEnum.PaginationLoading,
-                ))
+                recyclerViewAdapter?.setData(
+                    RVState.View(
+                        tempList,
+                        isPaginating = true,
+                    )
+                )
 
                 delay(3000L)
 
                 tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
+                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
+                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
+                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
+                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
 
                 recyclerViewAdapter?.setData(RVState.View(
-                    tempList,
-                    RecyclerViewEnum.View,
+                    tempList.toList(),
+                    isPaginating = false
                 ))
 
                 binding.mainRV.scrollToPosition(tempList.size - 1)
@@ -91,9 +98,9 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
         binding.prependButton.setOnClickListener {
             tempList.add(0, RecyclerViewModel(UUID.randomUUID().toString()))
 
-            recyclerViewAdapter?.setData(RVState.View(
+            recyclerViewAdapter?.setData(RVState.CUDOperation(
                 tempList,
-                recyclerViewAdapter!!.rvState.rvEnum,
+                CUDOperations.Prepend,
             ))
 
             binding.mainRV.scrollToPosition(0)
@@ -106,9 +113,9 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
         binding.insertButton.setOnClickListener {
             tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
 
-            recyclerViewAdapter?.setData(RVState.View(
+            recyclerViewAdapter?.setData(RVState.CUDOperation(
                 tempList,
-                recyclerViewAdapter!!.rvState.rvEnum,
+                CUDOperations.Create,
             ))
 
             binding.mainRV.scrollToPosition(tempList.size - 1)
@@ -117,22 +124,18 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
         binding.paginateErrorButton.setOnClickListener {
             recyclerViewAdapter?.setData(RVState.View(
                 tempList,
-                RecyclerViewEnum.PaginationError,
+                paginationErrorMessage = "Pagination example error"
             ))
         }
 
         binding.clearButton.setOnClickListener {
             tempList.clear()
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                recyclerViewAdapter!!.rvState.rvEnum,
-            ))
+            recyclerViewAdapter?.setData(RVState.Empty)
         }
 
         binding.viewButton.setOnClickListener {
             recyclerViewAdapter?.setData(RVState.View(
                 tempList,
-                RecyclerViewEnum.View,
             ))
         }
     }
@@ -144,11 +147,11 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
             addItemDecoration(DividerItemDecoration(context, linearLayoutManager.orientation))
             recyclerViewAdapter = RecyclerViewAdapter(object: Interaction<RecyclerViewModel> {
                 override fun onItemSelected(position: Int, item: RecyclerViewModel) {
-                    tempList.remove(item)
+                    tempList.removeAt(position)
 
-                    recyclerViewAdapter?.setData(RVState.View(
+                    recyclerViewAdapter?.setData(RVState.CUDOperation(
                         tempList,
-                        recyclerViewAdapter!!.rvState.rvEnum,
+                        CUDOperations.Delete
                     ))
                 }
 
@@ -158,7 +161,6 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
                     recyclerViewAdapter?.setData(RVState.View(
                         tempList,
-                        recyclerViewAdapter!!.rvState.rvEnum,
                     ))
                 }
 
@@ -167,10 +169,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                 }
             })
             adapter = recyclerViewAdapter
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                RecyclerViewEnum.View,
-            ))
+            recyclerViewAdapter?.setData(RVState.View(tempList.toList()))
         }
     }
 }
