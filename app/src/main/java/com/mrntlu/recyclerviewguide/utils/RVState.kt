@@ -11,14 +11,14 @@ sealed class RVState<out T>(
     ): RVState<Nothing>(RecyclerViewEnum.Error.value)
 
     data class View<T>(
-        override var list: List<T>,
+        override var list: MutableList<T>,
         var isPaginating: Boolean = false,
         var isPaginationExhausted: Boolean = false,
         var paginationErrorMessage: String? = null,
     ): RVState<T>(RecyclerViewEnum.View.value), DataHolderState<T>
 
     data class CUDOperation<T>( //Insert Update Delete
-        override var list: List<T>,
+        override var list: MutableList<T>,
         val operation: CUDOperations,
     ): RVState<T>(RecyclerViewEnum.CUDOperation.value), DataHolderState<T>
 }
@@ -31,5 +31,7 @@ enum class CUDOperations {
 }
 
 interface DataHolderState<T> {
-    var list: List<T>
+    var list: MutableList<T>
 }
+
+fun <T> RVState.View<T>.canPaginate() = isPaginationExhausted && !isPaginating && paginationErrorMessage == null

@@ -89,7 +89,7 @@ class RecyclerViewAdapter(
             )
             val diffResults = DiffUtil.calculateDiff(diffUtil, true)
 
-            (rvState as DataHolderState<RecyclerViewModel>).list = newState.list.toList()
+            (rvState as DataHolderState<RecyclerViewModel>).list = newState.list.toMutableList()
 
             diffResults.dispatchUpdatesTo(object: ListUpdateCallback{
                 override fun onInserted(position: Int, count: Int) {

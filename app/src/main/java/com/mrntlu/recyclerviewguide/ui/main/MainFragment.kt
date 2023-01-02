@@ -2,14 +2,12 @@ package com.mrntlu.recyclerviewguide.ui.main
 
 import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.mrntlu.recyclerviewguide.R
 import com.mrntlu.recyclerviewguide.adapters.RecyclerViewAdapter
 import com.mrntlu.recyclerviewguide.databinding.FragmentMainBinding
 import com.mrntlu.recyclerviewguide.interfaces.Interaction
@@ -17,8 +15,8 @@ import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
 import com.mrntlu.recyclerviewguide.ui.BaseFragment
 import com.mrntlu.recyclerviewguide.utils.CUDOperations
 import com.mrntlu.recyclerviewguide.utils.RVState
-import com.mrntlu.recyclerviewguide.utils.RecyclerViewEnum
 import com.mrntlu.recyclerviewguide.utils.printLog
+import com.mrntlu.recyclerviewguide.viewmodels.MainViewModel
 import kotlinx.coroutines.*
 import java.util.UUID
 
@@ -62,6 +60,13 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
         setListeners()
         setRecyclerView()
+        setObservers()
+    }
+
+    private fun setObservers() {
+        viewModel.rvList.observe(viewLifecycleOwner) {
+            recyclerViewAdapter?.setData(it)
+        }
     }
 
     private fun setListeners() {
@@ -70,29 +75,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
         }
 
         binding.appendButton.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                recyclerViewAdapter?.setData(
-                    RVState.View(
-                        tempList,
-                        isPaginating = true,
-                    )
-                )
-
-                delay(3000L)
-
-                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
-                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
-                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
-                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
-                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
-
-                recyclerViewAdapter?.setData(RVState.View(
-                    tempList.toList(),
-                    isPaginating = false
-                ))
-
-                binding.mainRV.scrollToPosition(tempList.size - 1)
-            }
+            viewModel.fetchData()
         }
 
         binding.prependButton.setOnClickListener {
@@ -156,12 +139,15 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                 }
 
                 override fun onLongPressed(position: Int, item: RecyclerViewModel) {
+                    val newList = tempList.toMutableList()
                     item.id = "Test ID"
-                    tempList[position] = item
+                    newList[position] = item
 
-                    recyclerViewAdapter?.setData(RVState.View(
-                        tempList,
-                    ))
+                    printLog("${newList.hashCode()} ${tempList.hashCode()}")
+
+                    printLog("OnLongPressed ${tempList.get(position)}\n${newList.get(position)}")
+
+                    recyclerViewAdapter?.setData(RVState.CUDOperation(newList, CUDOperations.Update))
                 }
 
                 override fun onErrorRefreshPressed() {
@@ -169,7 +155,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                 }
             })
             adapter = recyclerViewAdapter
-            recyclerViewAdapter?.setData(RVState.View(tempList.toList()))
+            recyclerViewAdapter?.setData(RVState.View(tempList.toMutableList()))
         }
     }
 }
