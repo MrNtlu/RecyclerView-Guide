@@ -1,140 +1,133 @@
 package com.mrntlu.recyclerviewguide.adapters
 
 import androidx.recyclerview.widget.RecyclerView
+import com.mrntlu.recyclerviewguide.adapters.viewholders.ErrorViewHolderBind
+import com.mrntlu.recyclerviewguide.adapters.viewholders.ItemViewHolderBind
+import com.mrntlu.recyclerviewguide.adapters.viewholders.PaginationExhaustViewHolderBind
 import com.mrntlu.recyclerviewguide.interfaces.Interaction
-import com.mrntlu.recyclerviewguide.utils.RecyclerViewEnum
-import com.mrntlu.recyclerviewguide.utils.RVState
-import com.mrntlu.recyclerviewguide.utils.RecyclerViewDiffUtilCallBack
-import com.mrntlu.recyclerviewguide.utils.printLog
+import com.mrntlu.recyclerviewguide.utils.*
 
-abstract class BaseAdapter<T>(open val interaction: Interaction<T>? = null): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-    /* Sources
-    https://github.com/MrNtlu/BiSU-Task/blob/main/app/src/main/java/com/mrntlu/bisu/ui/HomeFragment.kt
-    https://github.com/MrNtlu/BiSU-Task/tree/main/app/src/main/java/com/mrntlu/bisu/ui
-    https://github.com/MrNtlu/SOLNetwork/blob/master/app/src/main/java/com/mrntlu/solnetwork/view/adapter/community/InfoAdapter.kt
-    https://github.com/MrNtlu/MyAnimeInfo2/blob/master/app/src/main/java/com/mrntlu/myanimeinfo2/adapters/BaseAdapter.kt
+@Suppress("UNCHECKED_CAST")
+abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    /*TODO
+     * Change loading with shimmer
+     * Try to implement drag & drop
+     * FAB scroll to top if certain threshold and hide if scrolling bottom show if scrolled 10 item up etc.
+     * Operation add loading error dialog
      */
 
-    var rvState: RVState<T> = RVState.Loading
-    private var recyclerView: RecyclerView? = null
+    private var isLoading = true
+    private var errorMessage: String? = null
+    var isPaginating = false
+    var canPaginate = true
+
+    protected var recyclerView: RecyclerView? = null
+    protected var arrayList: ArrayList<T> = arrayListOf()
+
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when(getItemViewType(position)) {
+            RecyclerViewEnum.View.value -> {
+                (holder as ItemViewHolderBind<T>).bind(arrayList[position], position, interaction)
+            }
+            RecyclerViewEnum.Error.value -> {
+                (holder as ErrorViewHolderBind<T>).bind(errorMessage, interaction)
+            }
+            RecyclerViewEnum.PaginationExhaust.value -> {
+                (holder as PaginationExhaustViewHolderBind<T>).bind(interaction)
+            }
+        }
+    }
 
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         this.recyclerView = recyclerView
     }
 
-    override fun getItemViewType(position: Int) = when (rvState.rvEnum) {
-        RecyclerViewEnum.PaginationLoading,
-        RecyclerViewEnum.PaginationError,
-        RecyclerViewEnum.PaginationExhaust -> {
-            if (position != itemCount.minus(1))
-                RecyclerViewEnum.View.value
+    override fun getItemViewType(position: Int) : Int {
+        return if (isLoading)
+            RecyclerViewEnum.Loading.value
+        else if (errorMessage != null)
+            RecyclerViewEnum.Error.value
+        else if (isPaginating && position == arrayList.size)
+            RecyclerViewEnum.PaginationLoading.value
+        else if (!canPaginate && position == arrayList.size)
+            RecyclerViewEnum.PaginationExhaust.value
+        else if (arrayList.isEmpty())
+            RecyclerViewEnum.Empty.value
+        else
+            RecyclerViewEnum.View.value
+    }
+
+    override fun getItemCount(): Int {
+        return if (isLoading || errorMessage != null || arrayList.isEmpty())
+            1
+        else {
+            if (arrayList.isNotEmpty() && !isPaginating && canPaginate) //View Type
+                arrayList.size
             else
-                rvState.rvEnum.value
+                arrayList.size.plus(1)
         }
-        else -> rvState.rvEnum.value
     }
 
-    override fun getItemCount() = when (rvState.rvEnum) {
-        RecyclerViewEnum.Empty, RecyclerViewEnum.Loading, RecyclerViewEnum.Error -> 1
-        RecyclerViewEnum.View -> (rvState as RVState.View).list.size
-        RecyclerViewEnum.PaginationLoading,
-        RecyclerViewEnum.PaginationError,
-        RecyclerViewEnum.PaginationExhaust -> (rvState as RVState.View).list.size + 1
+    fun setError(errorMessage: String, isPaginationError: Boolean) {
+        if (isPaginationError) {
+            setState(RecyclerViewEnum.PaginationExhaust)
+            notifyItemInserted(itemCount + 1)
+        } else {
+            setState(RecyclerViewEnum.Error)
+            this.errorMessage = errorMessage
+            notifyDataSetChanged()
+        }
     }
 
-    fun setData(newState: RVState<T>) {
-        printLog("$rvState\n$newState")
-        when(rvState) {
-            RVState.Empty -> {
-                rvState = if (newState is RVState.Error || newState is RVState.Loading) {
-                    newState
-                } else {
-                    RVState.View(
-                        (newState as RVState.View).list.toList(),
-                        if (newState.rvEnum == RecyclerViewEnum.Empty)
-                            RecyclerViewEnum.View
-                        else
-                            newState.rvEnum,
-                    )
-                }
-                notifyDataSetChanged()
-            }
-            is RVState.Error -> {
-                rvState = newState
-                notifyDataSetChanged()
-            }
-            RVState.Loading -> {
-                rvState = if (newState is RVState.View) {
-                    RVState.View(
-                        newState.list.toList(),
-                        newState.rvEnum
-                    )
-                } else {
-                    newState
-                }
+    fun setLoading(isPaginating: Boolean) {
+        if (isPaginating) {
+            setState(RecyclerViewEnum.PaginationLoading)
+            notifyItemInserted(itemCount)
 
-                notifyDataSetChanged()
+            recyclerView?.scrollToPosition(itemCount - 1)
+        } else {
+            setState(RecyclerViewEnum.Loading)
+            notifyDataSetChanged()
+        }
+    }
+
+    fun handleOperation(operation: Operation<T>) {
+        val newList = arrayList.toMutableList()
+
+        when(operation.operationEnum) {
+            OperationEnum.Insert -> {
+                newList.add(operation.data)
             }
-            is RVState.View -> {
-//                printLog("RVState Enum:${rvState.rvEnum}\n" +
-//                        "List:${(rvState as RVState.View).list}\n" +
-//                        "NewState:${newState.rvEnum}\n" +
-//                        "List:${(newState as RVState.View).list}")
-                if (newState is RVState.View) {
-                    if (rvState.rvEnum == newState.rvEnum) {
-                        handleDiffUtil(newState)
-                    } else {
-                        if (isStatePagination(newState)) { //If new state is pagination
-                            onNewStateIsPagination()
-                        } else if (isStatePagination(rvState)) { //If old state is pagination
-                            notifyItemRemoved(itemCount)
-                        }
-
-                        rvState = RVState.View( //New State clone
-                            newState.list.toList(),
-                            newState.rvEnum
-                        )
-
-                        handleDiffUtil(rvState)
-                    }
-                }  else { // Current RVState is different from NewState, so change ViewHolder and list.
-                    rvState = newState
-                    notifyDataSetChanged()
+            OperationEnum.Delete -> {
+                newList.remove(operation.data)
+            }
+            OperationEnum.Update -> {
+                val index = newList.indexOfFirst {
+                    it == operation.data
                 }
+                newList[index] = operation.data
             }
         }
 
+        handleDiffUtil(newList as ArrayList<T>)
+    }
 
-//        if (newState.rvEnum.value != rvState.rvEnum.value) { //State changed, new state
-//            if (newState is RVState.View) {
-//                if (isStatePagination(newState)) { //If new state is pagination
-//                    onNewStateIsPagination()
-//                } else if (isStatePagination(rvState)) { //If old state is pagination
-//                    notifyItemRemoved(itemCount)
-//                } else {
-//                    notifyDataSetChanged()
-//                }
-//
-//                rvState = RVState.View( //New State clone
-//                    newState.list.toList(),
-//                    newState.rvEnum
-//                )
-//
-//                handleDiffUtil(rvState)
-//            }  else { //ViewType & ViewHolder changes
-//                rvState = newState
-//                notifyDataSetChanged()
-//            }
-//        } else if (rvState is RVState.View) {
-//            handleDiffUtil(newState)
-//        } else if (rvState is RVState.Empty) {
-//            rvState = RVState.View(
-//                (newState as RVState.View).list.toList(),
-//                newState.rvEnum
-//            )
-//            notifyDataSetChanged()
-//        }
+    fun setData(newList: ArrayList<T>, isPaginationData: Boolean = false) {
+        setState(RecyclerViewEnum.View)
+
+        if (!isPaginationData) {
+            if (arrayList.isNotEmpty())
+                arrayList.clear()
+            arrayList.addAll(newList)
+            notifyDataSetChanged()
+        } else {
+            notifyItemRemoved(itemCount)
+
+            newList.addAll(0, arrayList)
+            handleDiffUtil(newList)
+        }
     }
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
@@ -142,16 +135,40 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>? = null): Rec
         this.recyclerView = null
     }
 
-    protected abstract fun handleDiffUtil(newState: RVState<T>)
+    protected abstract fun handleDiffUtil(newList: ArrayList<T>)
 
-    private fun onNewStateIsPagination() {
-        notifyItemInserted(itemCount + 1)
-        recyclerView?.scrollToPosition(itemCount)
+    private fun setState(rvEnum: RecyclerViewEnum) {
+        when(rvEnum) {
+            RecyclerViewEnum.Empty -> {
+                isLoading = false
+                isPaginating = false
+                errorMessage = null
+            }
+            RecyclerViewEnum.Loading -> {
+                isLoading = true
+                isPaginating = false
+                errorMessage = null
+                canPaginate = true
+            }
+            RecyclerViewEnum.Error -> {
+                isLoading = false
+                isPaginating = false
+            }
+            RecyclerViewEnum.View -> {
+                isLoading = false
+                isPaginating = false
+                errorMessage = null
+            }
+            RecyclerViewEnum.PaginationLoading -> {
+                isLoading = false
+                isPaginating = true
+                errorMessage = null
+            }
+            RecyclerViewEnum.PaginationExhaust -> {
+                isLoading = false
+                isPaginating = false
+                canPaginate = false
+            }
+        }
     }
-
-    private fun isStatePagination(state: RVState<T>) = (
-        state.rvEnum.value == RecyclerViewEnum.PaginationLoading.value ||
-        state.rvEnum.value == RecyclerViewEnum.PaginationError.value ||
-        state.rvEnum.value == RecyclerViewEnum.PaginationExhaust.value
-    )
 }

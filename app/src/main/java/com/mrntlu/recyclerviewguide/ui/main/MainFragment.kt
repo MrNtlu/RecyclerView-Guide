@@ -2,23 +2,23 @@ package com.mrntlu.recyclerviewguide.ui.main
 
 import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AbsListView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.mrntlu.recyclerviewguide.R
+import androidx.recyclerview.widget.RecyclerView
 import com.mrntlu.recyclerviewguide.adapters.RecyclerViewAdapter
 import com.mrntlu.recyclerviewguide.databinding.FragmentMainBinding
 import com.mrntlu.recyclerviewguide.interfaces.Interaction
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
 import com.mrntlu.recyclerviewguide.ui.BaseFragment
-import com.mrntlu.recyclerviewguide.utils.RVState
-import com.mrntlu.recyclerviewguide.utils.RecyclerViewEnum
-import com.mrntlu.recyclerviewguide.utils.printLog
-import kotlinx.coroutines.*
+import com.mrntlu.recyclerviewguide.utils.NetworkResponse
+import com.mrntlu.recyclerviewguide.utils.quickScrollToTop
+import com.mrntlu.recyclerviewguide.viewmodels.MainViewModel
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 class MainFragment : BaseFragment<FragmentMainBinding>() {
@@ -28,19 +28,6 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
     }
 
     private lateinit var viewModel: MainViewModel
-    private val tempList = mutableListOf<RecyclerViewModel>(
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-    )
     private var recyclerViewAdapter: RecyclerViewAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,79 +48,64 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
         setListeners()
         setRecyclerView()
+        setObservers()
     }
 
-    private fun setListeners() {
-        binding.errorButton.setOnClickListener {
-            recyclerViewAdapter?.setData(RVState.Error("Custom error message"))
-        }
+    private fun setObservers() {
+        viewModel.rvList.observe(viewLifecycleOwner) { response ->
+            binding.swipeRefreshLayout.isEnabled = if (response is NetworkResponse.Success) {
+                true
+            } else if (response is NetworkResponse.Failure) {
+                response.isPaginationError
+            } else
+                false
 
-        binding.appendButton.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                recyclerViewAdapter?.setData(RVState.View(
-                    tempList,
-                    RecyclerViewEnum.PaginationLoading,
-                ))
-
-                delay(3000L)
-
-                tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
-
-                recyclerViewAdapter?.setData(RVState.View(
-                    tempList,
-                    RecyclerViewEnum.View,
-                ))
-
-                binding.mainRV.scrollToPosition(tempList.size - 1)
+            when(response) {
+                is NetworkResponse.Failure -> {
+                    recyclerViewAdapter?.setError(response.errorMessage, response.isPaginationError)
+                }
+                is NetworkResponse.Loading -> {
+                    recyclerViewAdapter?.setLoading(response.isPaginating)
+                }
+                is NetworkResponse.Success -> {
+                    recyclerViewAdapter?.setData(response.data, response.isPaginationData)
+                }
             }
         }
 
-        binding.prependButton.setOnClickListener {
-            tempList.add(0, RecyclerViewModel(UUID.randomUUID().toString()))
+        viewModel.rvOperation.observe(viewLifecycleOwner) { response ->
+            when(response) {
+                is NetworkResponse.Failure -> {} //Show dialog
+                is NetworkResponse.Loading -> {} //Show dialog
+                is NetworkResponse.Success -> {
+                    recyclerViewAdapter?.handleOperation(response.data)
+                }
+            }
+        }
+    }
 
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                recyclerViewAdapter!!.rvState.rvEnum,
-            ))
+    private fun setListeners() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshData()
 
-            binding.mainRV.scrollToPosition(0)
+            binding.swipeRefreshLayout.isRefreshing = false
         }
 
-        binding.loadingButton.setOnClickListener {
-            recyclerViewAdapter?.setData(RVState.Loading)
+        binding.errorButton.setOnClickListener {
+            viewModel.throwError()
+        }
+
+        binding.appendButton.setOnClickListener {
+            if (recyclerViewAdapter?.canPaginate == true && recyclerViewAdapter?.isPaginating == false)
+                viewModel.fetchData()
         }
 
         binding.insertButton.setOnClickListener {
-            tempList.add(tempList.size, RecyclerViewModel(UUID.randomUUID().toString()))
-
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                recyclerViewAdapter!!.rvState.rvEnum,
-            ))
-
-            binding.mainRV.scrollToPosition(tempList.size - 1)
+            viewModel.insertData(RecyclerViewModel(UUID.randomUUID().toString()))
         }
 
         binding.paginateErrorButton.setOnClickListener {
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                RecyclerViewEnum.PaginationError,
-            ))
-        }
-
-        binding.clearButton.setOnClickListener {
-            tempList.clear()
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                recyclerViewAdapter!!.rvState.rvEnum,
-            ))
-        }
-
-        binding.viewButton.setOnClickListener {
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                RecyclerViewEnum.View,
-            ))
+            viewModel.exhaustPagination()
         }
     }
 
@@ -143,34 +115,50 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
             layoutManager = linearLayoutManager
             addItemDecoration(DividerItemDecoration(context, linearLayoutManager.orientation))
             recyclerViewAdapter = RecyclerViewAdapter(object: Interaction<RecyclerViewModel> {
-                override fun onItemSelected(position: Int, item: RecyclerViewModel) {
-                    tempList.remove(item)
-
-                    recyclerViewAdapter?.setData(RVState.View(
-                        tempList,
-                        recyclerViewAdapter!!.rvState.rvEnum,
-                    ))
+                override fun onItemSelected(item: RecyclerViewModel) {
+                    viewModel.deleteData(item)
                 }
 
-                override fun onLongPressed(position: Int, item: RecyclerViewModel) {
-                    item.id = "Test ID"
-                    tempList[position] = item
-
-                    recyclerViewAdapter?.setData(RVState.View(
-                        tempList,
-                        recyclerViewAdapter!!.rvState.rvEnum,
-                    ))
+                override fun onLongPressed(item: RecyclerViewModel) {
+                    viewModel.updateData(item.copy())
                 }
 
                 override fun onErrorRefreshPressed() {
-                    TODO("Not yet implemented")
+                    viewModel.refreshData()
+                }
+
+                override fun onExhaustButtonPressed() {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        quickScrollToTop()
+                    }
                 }
             })
             adapter = recyclerViewAdapter
-            recyclerViewAdapter?.setData(RVState.View(
-                tempList,
-                RecyclerViewEnum.View,
-            ))
+
+            var isScrolling = false
+            addOnScrollListener(object: RecyclerView.OnScrollListener() {
+                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                    super.onScrollStateChanged(recyclerView, newState)
+                    isScrolling = newState != AbsListView.OnScrollListener.SCROLL_STATE_IDLE
+                }
+
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    val itemCount = linearLayoutManager.itemCount
+                    val lastVisibleItemPosition = linearLayoutManager.findLastVisibleItemPosition()
+
+                    recyclerViewAdapter?.let {
+                        if (
+                            isScrolling &&
+                            lastVisibleItemPosition >= itemCount.minus(5) &&
+                            it.canPaginate &&
+                            !it.isPaginating
+                        ) {
+                            viewModel.fetchData()
+                        }
+                    }
+                }
+            })
         }
     }
 }

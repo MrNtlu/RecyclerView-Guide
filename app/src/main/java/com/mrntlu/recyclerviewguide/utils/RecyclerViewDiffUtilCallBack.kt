@@ -16,9 +16,9 @@ class RecyclerViewDiffUtilCallBack(
     }
 
     override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-        printLog("Are contents the same? ${oldList[oldItemPosition].id} ${oldList[oldItemPosition].id != newList[newItemPosition].id}")
         return when {
             oldList[oldItemPosition].id != newList[newItemPosition].id -> false
+            oldList[oldItemPosition].content != newList[newItemPosition].content -> false
             else -> true
         }
     }
