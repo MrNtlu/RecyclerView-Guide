@@ -1,13 +1,17 @@
 package com.mrntlu.recyclerviewguide.utils
 
 sealed class NetworkResponse<out T> {
-    object Loading: NetworkResponse<Nothing>()
+    data class Loading(
+        val isPaginating: Boolean,
+    ): NetworkResponse<Nothing>()
 
     data class Success<out T>(
-        val data: T
+        val data: T,
+        val isPaginationData: Boolean = false,
     ): NetworkResponse<T>()
 
     data class Failure(
-        val errorMessage: String
+        val errorMessage: String,
+        val isPaginationError: Boolean = false,
     ): NetworkResponse<Nothing>()
 }

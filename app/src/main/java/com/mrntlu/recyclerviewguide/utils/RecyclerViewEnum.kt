@@ -6,6 +6,5 @@ enum class RecyclerViewEnum(val value: Int) {
     Error(2),
     View(3),
     PaginationLoading(4),
-    PaginationError(5),
-    CUDOperation(6)
+    PaginationExhaust(5),
 }

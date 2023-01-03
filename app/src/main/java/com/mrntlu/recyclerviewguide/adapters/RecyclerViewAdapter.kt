@@ -2,8 +2,6 @@ package com.mrntlu.recyclerviewguide.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.constraintlayout.motion.utils.ViewState
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListUpdateCallback
 import androidx.recyclerview.widget.RecyclerView
@@ -23,93 +21,39 @@ class RecyclerViewAdapter(
             RecyclerViewEnum.View.value -> ItemViewHolder(CellItemBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             RecyclerViewEnum.Loading.value -> LoadingViewHolder(CellLoadingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             RecyclerViewEnum.PaginationLoading.value -> PaginationLoadingViewHolder(CellPaginationLoadingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-            RecyclerViewEnum.PaginationError.value -> PaginationErrorViewHolder(CellPaginationErrorBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            RecyclerViewEnum.PaginationExhaust.value -> PaginationExhaustViewHolder(CellPaginationExhaustBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             RecyclerViewEnum.Error.value -> ErrorItemViewHolder(CellErrorBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             else -> EmptyViewHolder(CellEmptyBinding.inflate(LayoutInflater.from(parent.context), parent, false))
         }
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when(holder) {
-            is ItemViewHolder -> {
-                val item = (rvState as DataHolderState<RecyclerViewModel>).list[holder.adapterPosition]
+    override fun handleDiffUtil(newList: ArrayList<RecyclerViewModel>) {
+        val diffUtil = RecyclerViewDiffUtilCallBack(
+            arrayList,
+            newList,
+        )
+        val diffResults = DiffUtil.calculateDiff(diffUtil, true)
 
-                val text = "Position: ${holder.adapterPosition} ${item.text}"
-                holder.binding.itemTV.text = text
+        arrayList = newList.toList() as ArrayList<RecyclerViewModel>
 
-                holder.binding.root.setOnClickListener {
-                    try {
-                        interaction.onItemSelected(
-                            holder.adapterPosition,
-                            item,
-                        )
-                    } catch (e: Exception) {
-                        Toast.makeText(
-                            holder.binding.root.context,
-                            "Please wait before doing any operation.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-
-                holder.binding.root.setOnLongClickListener {
-                    try {
-                        interaction.onLongPressed(
-                            holder.adapterPosition,
-                            item,
-                        )
-                    } catch (e: Exception) {
-                        Toast.makeText(
-                            holder.binding.root.context,
-                            "Please wait before doing any operation.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-
-                    return@setOnLongClickListener true
-                }
+        diffResults.dispatchUpdatesTo(object: ListUpdateCallback{
+            override fun onInserted(position: Int, count: Int) {
+                printLog("Insert $count")
             }
-            is ErrorItemViewHolder -> {
-                holder.binding.errorText.text = (rvState as RVState.Error).message
+
+            override fun onRemoved(position: Int, count: Int) {
+                printLog("Removed $count")
             }
-            is PaginationErrorViewHolder -> {
-                holder.binding.textView3.text = (rvState as RVState.View).paginationErrorMessage
+
+            override fun onMoved(fromPosition: Int, toPosition: Int) {
+                printLog("Moved $fromPosition $toPosition")
             }
-        }
-    }
 
-    override fun handleDiffUtil(newState: RVState<RecyclerViewModel>) {
-        if (newState is RVState.View && newState.list.isEmpty()) {
-            rvState = RVState.Empty
-            notifyDataSetChanged()
-        } else {
-            val diffUtil = RecyclerViewDiffUtilCallBack(
-                (rvState as DataHolderState<RecyclerViewModel>).list,
-                (newState as DataHolderState<RecyclerViewModel>).list,
-            )
-            val diffResults = DiffUtil.calculateDiff(diffUtil, true)
+            override fun onChanged(position: Int, count: Int, payload: Any?) {
+                printLog("Changed $position $count")
+            }
 
-            (rvState as DataHolderState<RecyclerViewModel>).list = newState.list.toMutableList()
-
-            diffResults.dispatchUpdatesTo(object: ListUpdateCallback{
-                override fun onInserted(position: Int, count: Int) {
-                    printLog("Insert $count")
-                }
-
-                override fun onRemoved(position: Int, count: Int) {
-                    printLog("Removed $count")
-                }
-
-                override fun onMoved(fromPosition: Int, toPosition: Int) {
-                    printLog("Moved")
-                }
-
-                override fun onChanged(position: Int, count: Int, payload: Any?) {
-                    printLog("Changed $count")
-                }
-
-            })
-            diffResults.dispatchUpdatesTo(this)
-        }
+        })
+        diffResults.dispatchUpdatesTo(this)
     }
 }

@@ -2,60 +2,79 @@ package com.mrntlu.recyclerviewguide.repository
 
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
 import com.mrntlu.recyclerviewguide.utils.NetworkResponse
-import com.mrntlu.recyclerviewguide.utils.RVState
-import com.mrntlu.recyclerviewguide.utils.RecyclerViewEnum
+import com.mrntlu.recyclerviewguide.utils.Operation
+import com.mrntlu.recyclerviewguide.utils.OperationEnum
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import java.util.*
+import kotlin.collections.ArrayList
 
 class MainRepository {
 
-    private val tempList = mutableListOf<RecyclerViewModel>(
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-    )
+    private val tempList = arrayListOf<RecyclerViewModel>().apply {
+        for (i in 0..5000) {
+            add(RecyclerViewModel(UUID.randomUUID().toString(), "Content $i"),)
+        }
+    }
 
-    private val tempPaginationList = mutableListOf<RecyclerViewModel>(
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-        RecyclerViewModel(UUID.randomUUID().toString()),
-    )
+    fun fetchData(page: Int): Flow<NetworkResponse<ArrayList<RecyclerViewModel>>> = flow {
+        emit(NetworkResponse.Loading(page != 1))
 
-    fun fetchData(page: Int): Flow<NetworkResponse<MutableList<RecyclerViewModel>>> = flow {
-        emit(NetworkResponse.Loading)
-
-        kotlinx.coroutines.delay(1000L)
+        kotlinx.coroutines.delay(2000L)
 
         try {
             if (page == 1)
-                emit(NetworkResponse.Success(tempList))
-            else
-                emit(NetworkResponse.Success(tempPaginationList))
+                emit(NetworkResponse.Success(tempList.toList() as ArrayList<RecyclerViewModel>))
+            else {
+                val tempPaginationList = arrayListOf<RecyclerViewModel>().apply {
+                    for (i in 0..5000) {
+                        add(RecyclerViewModel(UUID.randomUUID().toString(), "Content ${i * 2}"),)
+                    }
+                }
+
+                emit(NetworkResponse.Success(
+                    tempPaginationList,
+                    isPaginationData = true,
+                ))
+            }
+        } catch (e: Exception) {
+            emit(NetworkResponse.Failure(
+                e.message ?: e.toString(),
+                isPaginationError = page != 1
+            ))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun deleteData(item: RecyclerViewModel): Flow<NetworkResponse<Operation<RecyclerViewModel>>> = flow {
+        kotlinx.coroutines.delay(1000L)
+
+        try {
+            emit(NetworkResponse.Success(Operation(item, OperationEnum.Delete)))
         } catch (e: Exception) {
             emit(NetworkResponse.Failure(e.message ?: e.toString()))
         }
     }.flowOn(Dispatchers.IO)
 
-    fun deleteData(item: RecyclerViewModel) = flow {
+    fun updateData(item: RecyclerViewModel): Flow<NetworkResponse<Operation<RecyclerViewModel>>> = flow {
         kotlinx.coroutines.delay(1000L)
 
         try {
-
+            item.content = "Updated Content ${(0..10).random()}"
+            emit(NetworkResponse.Success(Operation(item.copy(), OperationEnum.Update)))
         } catch (e: Exception) {
-            emit(RVState.Error(e.message ?: e.toString()))
+            emit(NetworkResponse.Failure(e.message ?: e.toString()))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun insertData(item: RecyclerViewModel): Flow<NetworkResponse<Operation<RecyclerViewModel>>> = flow {
+        kotlinx.coroutines.delay(1000L)
+
+        try {
+            emit(NetworkResponse.Success(Operation(item, operationEnum = OperationEnum.Insert)))
+        } catch (e: Exception) {
+            emit(NetworkResponse.Failure(e.message ?: e.toString()))
         }
     }.flowOn(Dispatchers.IO)
 }

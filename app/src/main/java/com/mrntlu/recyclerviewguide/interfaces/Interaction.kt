@@ -1,8 +1,9 @@
 package com.mrntlu.recyclerviewguide.interfaces
 
 interface Interaction<T> {
-    fun onItemSelected(position: Int, item: T)
-    fun onLongPressed(position: Int, item: T)
+    fun onItemSelected(item: T)
+    fun onLongPressed(item: T)
 
     fun onErrorRefreshPressed()
+    fun onExhaustButtonPressed()
 }

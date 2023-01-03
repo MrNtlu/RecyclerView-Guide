@@ -7,8 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
 import com.mrntlu.recyclerviewguide.repository.MainRepository
 import com.mrntlu.recyclerviewguide.utils.NetworkResponse
-import com.mrntlu.recyclerviewguide.utils.RVState
-import com.mrntlu.recyclerviewguide.utils.canPaginate
+import com.mrntlu.recyclerviewguide.utils.Operation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -16,8 +15,11 @@ import kotlinx.coroutines.withContext
 class MainViewModel : ViewModel() {
     private val repository = MainRepository()
 
-    private val _rvList = MutableLiveData<RecyclerViewModel>()
-    val rvList: LiveData<RVState<RecyclerViewModel>> = _rvList
+    private val _rvList = MutableLiveData<NetworkResponse<ArrayList<RecyclerViewModel>>>()
+    val rvList: LiveData<NetworkResponse<ArrayList<RecyclerViewModel>>> = _rvList
+
+    private val _rvOperation = MutableLiveData<NetworkResponse<Operation<RecyclerViewModel>>>()
+    val rvOperation: LiveData<NetworkResponse<Operation<RecyclerViewModel>>> = _rvOperation
 
     private var page: Int = 1
 
@@ -25,50 +27,55 @@ class MainViewModel : ViewModel() {
         fetchData()
     }
 
-    fun resetPage() {
+    fun refreshData() {
         page = 1
+        fetchData()
     }
 
-    fun fetchData() = viewModelScope.launch {
+    fun fetchData() = viewModelScope.launch(Dispatchers.IO) {
         repository.fetchData(page).collect { state ->
             withContext(Dispatchers.Main) {
-                when (state) {
-                    is NetworkResponse.Failure -> {
-                        if (page == 1) {
-                            _rvList.value = RVState.Error(state.errorMessage)
-                        } else {
-                            _rvList.value = RVState.View(
-                                (_rvList.value as RVState.View).list,
-                                paginationErrorMessage = state.errorMessage,
-                                isPaginationExhausted = true,
-                            )
-                        }
-                    }
-                    NetworkResponse.Loading -> {
-                        if (page == 1) {
-                            _rvList.value = RVState.Loading
-                        } else {
-                            _rvList.value = RVState.View(
-                                (_rvList.value as RVState.View).list,
-                                isPaginating = true,
-                            )
-                        }
-                    }
-                    is NetworkResponse.Success -> {
-                        if (page == 1) {
-                            _rvList.value = RVState.View(state.data)
-                        } else {
-                            val viewState = (_rvList.value as RVState.View<RecyclerViewModel>)
-                            viewState.list.addAll(
-                                state.data
-                            )
-                            viewState.isPaginating = false
-                        }
+                _rvList.value = state
 
-                        page += 1
-                    }
+                if (state is NetworkResponse.Success) {
+                    page += 1
                 }
             }
         }
+    }
+
+    fun deleteData(item: RecyclerViewModel) = viewModelScope.launch(Dispatchers.IO) {
+        repository.deleteData(item).collect { state ->
+            withContext(Dispatchers.Main) {
+                _rvOperation.value = state
+            }
+        }
+    }
+
+    fun updateData(item: RecyclerViewModel) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updateData(item).collect { state ->
+            withContext(Dispatchers.Main) {
+                _rvOperation.value = state
+            }
+        }
+    }
+
+    fun insertData(item: RecyclerViewModel) = viewModelScope.launch(Dispatchers.IO) {
+        repository.insertData(item).collect { state ->
+            withContext(Dispatchers.Main) {
+                _rvOperation.value = state
+            }
+        }
+    }
+
+    fun throwError() = viewModelScope.launch(Dispatchers.Main) {
+        _rvList.value = NetworkResponse.Failure("Error occured!")
+    }
+
+    fun exhaustPagination() = viewModelScope.launch(Dispatchers.Main) {
+        _rvList.value = NetworkResponse.Failure(
+            "Pagination Exhaust",
+            true
+        )
     }
 }
