@@ -1,25 +1,33 @@
 package com.mrntlu.recyclerviewguide.ui.main
 
-import androidx.lifecycle.ViewModelProvider
+import android.app.Dialog
+import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AbsListView
+import android.widget.Toast
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.mrntlu.recyclerviewguide.R
 import com.mrntlu.recyclerviewguide.adapters.RecyclerViewAdapter
+import com.mrntlu.recyclerviewguide.adapters.viewholders.RecyclerViewInteraction
 import com.mrntlu.recyclerviewguide.databinding.FragmentMainBinding
 import com.mrntlu.recyclerviewguide.interfaces.Interaction
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
+import com.mrntlu.recyclerviewguide.repository.PAGE_SIZE
 import com.mrntlu.recyclerviewguide.ui.BaseFragment
-import com.mrntlu.recyclerviewguide.utils.NetworkResponse
-import com.mrntlu.recyclerviewguide.utils.quickScrollToTop
+import com.mrntlu.recyclerviewguide.utils.*
 import com.mrntlu.recyclerviewguide.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
-import java.util.UUID
+import java.util.*
+
 
 class MainFragment : BaseFragment<FragmentMainBinding>() {
 
@@ -29,6 +37,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
     private lateinit var viewModel: MainViewModel
     private var recyclerViewAdapter: RecyclerViewAdapter? = null
+    private var loadingDialog: Dialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +55,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setDialog(view.context)
         setListeners()
         setRecyclerView()
         setObservers()
@@ -53,19 +63,22 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
     private fun setObservers() {
         viewModel.rvList.observe(viewLifecycleOwner) { response ->
-            binding.swipeRefreshLayout.isEnabled = if (response is NetworkResponse.Success) {
-                true
-            } else if (response is NetworkResponse.Failure) {
-                response.isPaginationError
-            } else
-                false
+            binding.swipeRefreshLayout.isEnabled = when (response) {
+                is NetworkResponse.Success -> {
+                    true
+                }
+                is NetworkResponse.Failure -> {
+                    response.isPaginationError
+                }
+                else -> false
+            }
 
             when(response) {
                 is NetworkResponse.Failure -> {
                     recyclerViewAdapter?.setError(response.errorMessage, response.isPaginationError)
                 }
                 is NetworkResponse.Loading -> {
-                    recyclerViewAdapter?.setLoading(response.isPaginating)
+                    recyclerViewAdapter?.setLoadingView(response.isPaginating)
                 }
                 is NetworkResponse.Success -> {
                     recyclerViewAdapter?.setData(response.data, response.isPaginationData)
@@ -75,9 +88,17 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
         viewModel.rvOperation.observe(viewLifecycleOwner) { response ->
             when(response) {
-                is NetworkResponse.Failure -> {} //Show dialog
-                is NetworkResponse.Loading -> {} //Show dialog
+                is NetworkResponse.Failure -> {
+                    if (loadingDialog?.isShowing == true)
+                        loadingDialog?.dismiss()
+                }
+                is NetworkResponse.Loading -> {
+                    if (recyclerViewAdapter?.isLoading == false)
+                        loadingDialog?.show()
+                }
                 is NetworkResponse.Success -> {
+                    if (loadingDialog?.isShowing == true)
+                        loadingDialog?.dismiss()
                     recyclerViewAdapter?.handleOperation(response.data)
                 }
             }
@@ -98,6 +119,8 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
         binding.appendButton.setOnClickListener {
             if (recyclerViewAdapter?.canPaginate == true && recyclerViewAdapter?.isPaginating == false)
                 viewModel.fetchData()
+
+            binding.mainRV.scrollToPosition(recyclerViewAdapter?.itemCount ?: 0)
         }
 
         binding.insertButton.setOnClickListener {
@@ -106,6 +129,12 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
         binding.paginateErrorButton.setOnClickListener {
             viewModel.exhaustPagination()
+        }
+
+        binding.fab.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                binding.mainRV.quickScrollToTop()
+            }
         }
     }
 
@@ -116,11 +145,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
             addItemDecoration(DividerItemDecoration(context, linearLayoutManager.orientation))
             recyclerViewAdapter = RecyclerViewAdapter(object: Interaction<RecyclerViewModel> {
                 override fun onItemSelected(item: RecyclerViewModel) {
-                    viewModel.deleteData(item)
-                }
-
-                override fun onLongPressed(item: RecyclerViewModel) {
-                    viewModel.updateData(item.copy())
+                    Toast.makeText(context, "Item ${item.content}", Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onErrorRefreshPressed() {
@@ -132,6 +157,19 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                         quickScrollToTop()
                     }
                 }
+            }, object: RecyclerViewInteraction {
+                override fun onUpdatePressed(item: RecyclerViewModel) {
+                    viewModel.updateData(item.copy())
+                }
+
+                override fun onDeletePressed(item: RecyclerViewModel) {
+                    viewModel.deleteData(item)
+                }
+
+                override fun onLikePressed(item: RecyclerViewModel) {
+                    viewModel.toggleLikeData(item.copy())
+                }
+
             })
             adapter = recyclerViewAdapter
 
@@ -147,6 +185,12 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                     val itemCount = linearLayoutManager.itemCount
                     val lastVisibleItemPosition = linearLayoutManager.findLastVisibleItemPosition()
 
+                    if (lastVisibleItemPosition > PAGE_SIZE.plus(PAGE_SIZE.div(2)) && dy <= -75) {
+                        binding.fab.show()
+                    } else if (lastVisibleItemPosition <= PAGE_SIZE.plus(PAGE_SIZE.div(2)) || dy >= 60) {
+                        binding.fab.hide()
+                    }
+
                     recyclerViewAdapter?.let {
                         if (
                             isScrolling &&
@@ -160,5 +204,20 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                 }
             })
         }
+    }
+
+    private fun setDialog(context: Context) {
+        loadingDialog = Dialog(context)
+        loadingDialog?.setCancelable(false)
+        loadingDialog?.setContentView(R.layout.dialog_loading)
+        loadingDialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    override fun onDestroyView() {
+        if (loadingDialog?.isShowing == true) {
+            loadingDialog?.dismiss()
+        }
+        loadingDialog = null
+        super.onDestroyView()
     }
 }

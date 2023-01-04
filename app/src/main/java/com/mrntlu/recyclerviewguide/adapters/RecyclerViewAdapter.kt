@@ -13,12 +13,13 @@ import com.mrntlu.recyclerviewguide.utils.*
 
 @Suppress("UNCHECKED_CAST")
 class RecyclerViewAdapter(
-    override val interaction: Interaction<RecyclerViewModel>
+    override val interaction: Interaction<RecyclerViewModel>,
+    private val extraInteraction: RecyclerViewInteraction,
 ): BaseAdapter<RecyclerViewModel>(interaction) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when(viewType) {
-            RecyclerViewEnum.View.value -> ItemViewHolder(CellItemBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            RecyclerViewEnum.View.value -> ItemViewHolder(CellItemBinding.inflate(LayoutInflater.from(parent.context), parent, false), extraInteraction)
             RecyclerViewEnum.Loading.value -> LoadingViewHolder(CellLoadingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             RecyclerViewEnum.PaginationLoading.value -> PaginationLoadingViewHolder(CellPaginationLoadingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             RecyclerViewEnum.PaginationExhaust.value -> PaginationExhaustViewHolder(CellPaginationExhaustBinding.inflate(LayoutInflater.from(parent.context), parent, false))

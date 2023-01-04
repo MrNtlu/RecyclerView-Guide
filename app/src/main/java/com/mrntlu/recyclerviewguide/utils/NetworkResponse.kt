@@ -2,7 +2,7 @@ package com.mrntlu.recyclerviewguide.utils
 
 sealed class NetworkResponse<out T> {
     data class Loading(
-        val isPaginating: Boolean,
+        val isPaginating: Boolean = false,
     ): NetworkResponse<Nothing>()
 
     data class Success<out T>(

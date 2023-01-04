@@ -60,6 +60,14 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun toggleLikeData(item: RecyclerViewModel) = viewModelScope.launch(Dispatchers.IO) {
+        repository.toggleLikeData(item).collect { state ->
+            withContext(Dispatchers.Main) {
+                _rvOperation.value = state
+            }
+        }
+    }
+
     fun insertData(item: RecyclerViewModel) = viewModelScope.launch(Dispatchers.IO) {
         repository.insertData(item).collect { state ->
             withContext(Dispatchers.Main) {

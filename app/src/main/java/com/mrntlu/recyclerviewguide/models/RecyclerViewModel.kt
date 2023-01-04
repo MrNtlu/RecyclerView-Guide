@@ -5,6 +5,7 @@ import java.util.*
 data class RecyclerViewModel(
     var id: String,
     var content: String = "",
+    var isLiked: Boolean = false,
 ) {
     val text: String
         get() = "ID: $id"

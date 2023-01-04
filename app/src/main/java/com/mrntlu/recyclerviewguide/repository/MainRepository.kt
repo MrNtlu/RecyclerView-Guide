@@ -11,10 +11,12 @@ import kotlinx.coroutines.flow.flowOn
 import java.util.*
 import kotlin.collections.ArrayList
 
+const val PAGE_SIZE = 50
+
 class MainRepository {
 
     private val tempList = arrayListOf<RecyclerViewModel>().apply {
-        for (i in 0..5000) {
+        for (i in 0..PAGE_SIZE) {
             add(RecyclerViewModel(UUID.randomUUID().toString(), "Content $i"),)
         }
     }
@@ -29,15 +31,22 @@ class MainRepository {
                 emit(NetworkResponse.Success(tempList.toList() as ArrayList<RecyclerViewModel>))
             else {
                 val tempPaginationList = arrayListOf<RecyclerViewModel>().apply {
-                    for (i in 0..5000) {
+                    for (i in 0..PAGE_SIZE) {
                         add(RecyclerViewModel(UUID.randomUUID().toString(), "Content ${i * 2}"),)
                     }
                 }
 
-                emit(NetworkResponse.Success(
-                    tempPaginationList,
-                    isPaginationData = true,
-                ))
+                if (page < 4) {
+                    emit(NetworkResponse.Success(
+                        tempPaginationList,
+                        isPaginationData = true,
+                    ))
+                } else {
+                    emit(NetworkResponse.Failure(
+                        "Pagination failed.",
+                        isPaginationError = true
+                    ))
+                }
             }
         } catch (e: Exception) {
             emit(NetworkResponse.Failure(
@@ -62,13 +71,26 @@ class MainRepository {
 
         try {
             item.content = "Updated Content ${(0..10).random()}"
-            emit(NetworkResponse.Success(Operation(item.copy(), OperationEnum.Update)))
+            emit(NetworkResponse.Success(Operation(item, OperationEnum.Update)))
+        } catch (e: Exception) {
+            emit(NetworkResponse.Failure(e.message ?: e.toString()))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun toggleLikeData(item: RecyclerViewModel): Flow<NetworkResponse<Operation<RecyclerViewModel>>> = flow {
+        kotlinx.coroutines.delay(1000L)
+
+        try {
+            item.isLiked = !item.isLiked
+            emit(NetworkResponse.Success(Operation(item, OperationEnum.Update)))
         } catch (e: Exception) {
             emit(NetworkResponse.Failure(e.message ?: e.toString()))
         }
     }.flowOn(Dispatchers.IO)
 
     fun insertData(item: RecyclerViewModel): Flow<NetworkResponse<Operation<RecyclerViewModel>>> = flow {
+        emit(NetworkResponse.Loading())
+
         kotlinx.coroutines.delay(1000L)
 
         try {

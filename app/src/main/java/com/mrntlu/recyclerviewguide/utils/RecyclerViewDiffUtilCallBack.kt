@@ -19,6 +19,7 @@ class RecyclerViewDiffUtilCallBack(
         return when {
             oldList[oldItemPosition].id != newList[newItemPosition].id -> false
             oldList[oldItemPosition].content != newList[newItemPosition].content -> false
+            oldList[oldItemPosition].isLiked != newList[newItemPosition].isLiked -> false
             else -> true
         }
     }

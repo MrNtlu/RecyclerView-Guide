@@ -1,5 +1,6 @@
 package com.mrntlu.recyclerviewguide.adapters
 
+import android.annotation.SuppressLint
 import androidx.recyclerview.widget.RecyclerView
 import com.mrntlu.recyclerviewguide.adapters.viewholders.ErrorViewHolderBind
 import com.mrntlu.recyclerviewguide.adapters.viewholders.ItemViewHolderBind
@@ -8,21 +9,13 @@ import com.mrntlu.recyclerviewguide.interfaces.Interaction
 import com.mrntlu.recyclerviewguide.utils.*
 
 @Suppress("UNCHECKED_CAST")
+@SuppressLint("NotifyDataSetChanged")
 abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-    /*TODO
-     * Change loading with shimmer
-     * Try to implement drag & drop
-     * FAB scroll to top if certain threshold and hide if scrolling bottom show if scrolled 10 item up etc.
-     * Operation add loading error dialog
-     */
-
-    private var isLoading = true
     private var errorMessage: String? = null
+    var isLoading = true
     var isPaginating = false
     var canPaginate = true
 
-    protected var recyclerView: RecyclerView? = null
     protected var arrayList: ArrayList<T> = arrayListOf()
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -37,11 +30,6 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
                 (holder as PaginationExhaustViewHolderBind<T>).bind(interaction)
             }
         }
-    }
-
-    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
-        super.onAttachedToRecyclerView(recyclerView)
-        this.recyclerView = recyclerView
     }
 
     override fun getItemViewType(position: Int) : Int {
@@ -81,12 +69,10 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
         }
     }
 
-    fun setLoading(isPaginating: Boolean) {
+    fun setLoadingView(isPaginating: Boolean) {
         if (isPaginating) {
             setState(RecyclerViewEnum.PaginationLoading)
             notifyItemInserted(itemCount)
-
-            recyclerView?.scrollToPosition(itemCount - 1)
         } else {
             setState(RecyclerViewEnum.Loading)
             notifyDataSetChanged()
@@ -128,11 +114,6 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
             newList.addAll(0, arrayList)
             handleDiffUtil(newList)
         }
-    }
-
-    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
-        super.onDetachedFromRecyclerView(recyclerView)
-        this.recyclerView = null
     }
 
     protected abstract fun handleDiffUtil(newList: ArrayList<T>)
