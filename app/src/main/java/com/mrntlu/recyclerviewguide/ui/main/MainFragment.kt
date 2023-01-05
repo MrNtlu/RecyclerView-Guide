@@ -61,6 +61,13 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
         setObservers()
     }
 
+    private fun setDialog(context: Context) {
+        loadingDialog = Dialog(context)
+        loadingDialog?.setCancelable(false)
+        loadingDialog?.setContentView(R.layout.dialog_loading)
+        loadingDialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
     private fun setObservers() {
         viewModel.rvList.observe(viewLifecycleOwner) { response ->
             binding.swipeRefreshLayout.isEnabled = when (response) {
@@ -75,7 +82,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
 
             when(response) {
                 is NetworkResponse.Failure -> {
-                    recyclerViewAdapter?.setError(response.errorMessage, response.isPaginationError)
+                    recyclerViewAdapter?.setErrorView(response.errorMessage, response.isPaginationError)
                 }
                 is NetworkResponse.Loading -> {
                     recyclerViewAdapter?.setLoadingView(response.isPaginating)
@@ -204,13 +211,6 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                 }
             })
         }
-    }
-
-    private fun setDialog(context: Context) {
-        loadingDialog = Dialog(context)
-        loadingDialog?.setCancelable(false)
-        loadingDialog?.setContentView(R.layout.dialog_loading)
-        loadingDialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
 
     override fun onDestroyView() {

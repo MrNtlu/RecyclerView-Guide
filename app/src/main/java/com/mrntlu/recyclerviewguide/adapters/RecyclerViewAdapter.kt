@@ -37,7 +37,7 @@ class RecyclerViewAdapter(
 
         arrayList = newList.toList() as ArrayList<RecyclerViewModel>
 
-        diffResults.dispatchUpdatesTo(object: ListUpdateCallback{
+        diffResults.dispatchUpdatesTo(object: ListUpdateCallback{ //For logging purposes only, it's not necessary
             override fun onInserted(position: Int, count: Int) {
                 printLog("Insert $count")
             }

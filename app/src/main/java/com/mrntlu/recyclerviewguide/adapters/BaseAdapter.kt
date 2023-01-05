@@ -18,6 +18,8 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
 
     protected var arrayList: ArrayList<T> = arrayListOf()
 
+    protected abstract fun handleDiffUtil(newList: ArrayList<T>)
+
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when(getItemViewType(position)) {
             RecyclerViewEnum.View.value -> {
@@ -58,10 +60,10 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
         }
     }
 
-    fun setError(errorMessage: String, isPaginationError: Boolean) {
+    fun setErrorView(errorMessage: String, isPaginationError: Boolean) {
         if (isPaginationError) {
             setState(RecyclerViewEnum.PaginationExhaust)
-            notifyItemInserted(itemCount + 1)
+            notifyItemInserted(itemCount)
         } else {
             setState(RecyclerViewEnum.Error)
             this.errorMessage = errorMessage
@@ -115,8 +117,6 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
             handleDiffUtil(newList)
         }
     }
-
-    protected abstract fun handleDiffUtil(newList: ArrayList<T>)
 
     private fun setState(rvEnum: RecyclerViewEnum) {
         when(rvEnum) {
