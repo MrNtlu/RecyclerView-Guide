@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.flowOn
 import java.util.*
 import kotlin.collections.ArrayList
 
-const val PAGE_SIZE = 10
+const val PAGE_SIZE = 50
 
 class MainRepository {
 
