@@ -89,6 +89,11 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                 }
                 is NetworkResponse.Success -> {
                     recyclerViewAdapter?.setData(response.data, response.isPaginationData)
+
+                    if (viewModel.isRestoringData) {
+                        binding.mainRV.scrollToPosition(viewModel.scrollPosition - 1)
+                        viewModel.isRestoringData = false
+                    }
                 }
             }
         }
@@ -191,6 +196,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                     super.onScrolled(recyclerView, dx, dy)
                     val itemCount = linearLayoutManager.itemCount
                     val lastVisibleItemPosition = linearLayoutManager.findLastVisibleItemPosition()
+                    viewModel.setScrollPosition(lastVisibleItemPosition)
 
                     if (lastVisibleItemPosition > PAGE_SIZE.plus(PAGE_SIZE.div(2)) && dy <= -75) {
                         binding.fab.show()

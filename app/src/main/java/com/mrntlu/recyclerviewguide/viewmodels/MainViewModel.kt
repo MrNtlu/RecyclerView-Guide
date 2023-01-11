@@ -1,9 +1,6 @@
 package com.mrntlu.recyclerviewguide.viewmodels
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.mrntlu.recyclerviewguide.models.RecyclerViewModel
 import com.mrntlu.recyclerviewguide.repository.MainRepository
 import com.mrntlu.recyclerviewguide.utils.NetworkResponse
@@ -12,7 +9,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel : ViewModel() {
+const val PAGE_KEY = "rv.page"
+const val SCROLL_POSITION_KEY = "rv.scroll_position"
+
+class MainViewModel(
+    private val savedStateHandle: SavedStateHandle
+) : ViewModel() {
     private val repository = MainRepository()
 
     private val _rvList = MutableLiveData<NetworkResponse<ArrayList<RecyclerViewModel>>>()
@@ -21,15 +23,46 @@ class MainViewModel : ViewModel() {
     private val _rvOperation = MutableLiveData<NetworkResponse<Operation<RecyclerViewModel>>>()
     val rvOperation: LiveData<NetworkResponse<Operation<RecyclerViewModel>>> = _rvOperation
 
-    private var page: Int = 1
+    /** Process Death restore
+     * isDataRestored is necessary to handle recyclerview.scrollToPosition
+     * scrollPosition is lastVisibleItem's position on recyclerview
+     */
+    var isRestoringData = false
+    private var page: Int = savedStateHandle[PAGE_KEY] ?: 1
+    var scrollPosition: Int = savedStateHandle[SCROLL_POSITION_KEY] ?: 0
+        private set
 
     init {
-        fetchData()
+        if (page != 1) {
+            restoreData()
+        } else {
+            fetchData()
+        }
     }
 
     fun refreshData() {
-        page = 1
+        setPagePosition(1)
         fetchData()
+    }
+
+    private fun restoreData() {
+        isRestoringData = true
+        val tempList = arrayListOf<RecyclerViewModel>()
+        viewModelScope.launch(Dispatchers.IO) {
+            for (p in 1..page) {
+                val job = launch(Dispatchers.IO) {
+                    repository.fetchData(p).collect { state ->
+                        if (state is NetworkResponse.Success) {
+                            tempList.addAll(state.data)
+                        }
+                    }
+                }
+                job.join()
+            }
+            withContext(Dispatchers.Main) {
+                _rvList.value = NetworkResponse.Success(tempList, isPaginationData = true)
+            }
+        }
     }
 
     fun fetchData() = viewModelScope.launch(Dispatchers.IO) {
@@ -38,7 +71,7 @@ class MainViewModel : ViewModel() {
                 _rvList.value = state
 
                 if (state is NetworkResponse.Success) {
-                    page += 1
+                    setPagePosition(page.plus(1))
                 }
             }
         }
@@ -85,5 +118,17 @@ class MainViewModel : ViewModel() {
             "Pagination Exhaust",
             true
         )
+    }
+
+    private fun setPagePosition(newPage: Int) {
+        page = newPage
+        savedStateHandle[PAGE_KEY] = newPage
+    }
+
+    fun setScrollPosition(newPosition: Int) {
+        if (!isRestoringData) {
+            scrollPosition = newPosition
+            savedStateHandle[SCROLL_POSITION_KEY] = newPosition
+        }
     }
 }
