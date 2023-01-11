@@ -60,15 +60,10 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
         }
     }
 
-    fun setErrorView(errorMessage: String, isPaginationError: Boolean) {
-        if (isPaginationError) {
-            setState(RecyclerViewEnum.PaginationExhaust)
-            notifyItemInserted(itemCount)
-        } else {
-            setState(RecyclerViewEnum.Error)
-            this.errorMessage = errorMessage
-            notifyDataSetChanged()
-        }
+    fun setErrorView(errorMessage: String) {
+        setState(RecyclerViewEnum.Error)
+        this.errorMessage = errorMessage
+        notifyDataSetChanged()
     }
 
     fun setLoadingView(isPaginating: Boolean) {
@@ -102,8 +97,8 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
         handleDiffUtil(newList as ArrayList<T>)
     }
 
-    fun setData(newList: ArrayList<T>, isPaginationData: Boolean = false) {
-        setState(RecyclerViewEnum.View)
+    fun setData(newList: ArrayList<T>, isPaginationData: Boolean = false, isPaginationExhausted: Boolean = false) {
+        setState(if (isPaginationExhausted) RecyclerViewEnum.PaginationExhaust else RecyclerViewEnum.View)
 
         if (!isPaginationData) {
             if (arrayList.isNotEmpty())

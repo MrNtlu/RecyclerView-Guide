@@ -7,7 +7,7 @@
     android:layout_height="wrap_content"
     app:shimmer_auto_start="true"
     app:shimmer_duration="1300"
-    app:shimmer_repeat_count="5">
+    app:shimmer_repeat_count="10">
 
     <LinearLayout
         android:layout_width="match_parent"

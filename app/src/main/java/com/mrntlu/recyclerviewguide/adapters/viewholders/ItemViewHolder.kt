@@ -65,7 +65,7 @@ class ItemViewHolder(
 
         binding.root.setOnClickListener {
             try {
-                interaction.onItemSelected(item)
+                interaction.onItemSelected(item, position)
             } catch (e: Exception) {
                 Toast.makeText(
                     binding.root.context,

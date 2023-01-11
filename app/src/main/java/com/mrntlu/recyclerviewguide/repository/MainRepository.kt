@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.flowOn
 import java.util.*
 import kotlin.collections.ArrayList
 
-const val PAGE_SIZE = 50
+const val PAGE_SIZE = 10
 
 class MainRepository {
 
@@ -42,17 +42,25 @@ class MainRepository {
                         isPaginationData = true,
                     ))
                 } else {
-                    emit(NetworkResponse.Failure(
-                        "Pagination failed.",
-                        isPaginationError = true
+                    emit(NetworkResponse.Success(
+                        arrayListOf(),
+                        isPaginationData = true,
+                        isPaginationExhausted = true
                     ))
                 }
             }
         } catch (e: Exception) {
-            emit(NetworkResponse.Failure(
-                e.message ?: e.toString(),
-                isPaginationError = page != 1
-            ))
+            if (page != 1) {
+                emit(NetworkResponse.Success(
+                    arrayListOf(),
+                    isPaginationData = true,
+                    isPaginationExhausted = true
+                ))
+            } else {
+                emit(NetworkResponse.Failure(
+                    e.message ?: e.toString(),
+                ))
+            }
         }
     }.flowOn(Dispatchers.IO)
 

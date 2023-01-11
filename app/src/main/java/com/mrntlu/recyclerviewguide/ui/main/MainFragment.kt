@@ -28,7 +28,6 @@ import com.mrntlu.recyclerviewguide.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
 import java.util.*
 
-
 class MainFragment : BaseFragment<FragmentMainBinding>() {
 
     companion object {
@@ -61,6 +60,11 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
         setObservers()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        viewModel.didOrientationChange = true
+    }
+
     private fun setDialog(context: Context) {
         loadingDialog = Dialog(context)
         loadingDialog?.setCancelable(false)
@@ -75,24 +79,29 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                     true
                 }
                 is NetworkResponse.Failure -> {
-                    response.isPaginationError
+                    false
                 }
                 else -> false
             }
 
             when(response) {
                 is NetworkResponse.Failure -> {
-                    recyclerViewAdapter?.setErrorView(response.errorMessage, response.isPaginationError)
+                    recyclerViewAdapter?.setErrorView(response.errorMessage)
                 }
                 is NetworkResponse.Loading -> {
                     recyclerViewAdapter?.setLoadingView(response.isPaginating)
                 }
                 is NetworkResponse.Success -> {
-                    recyclerViewAdapter?.setData(response.data, response.isPaginationData)
+                    recyclerViewAdapter?.setData(response.data, response.isPaginationData, response.isPaginationExhausted)
 
-                    if (viewModel.isRestoringData) {
+                    if (viewModel.isRestoringData || viewModel.didOrientationChange) {
                         binding.mainRV.scrollToPosition(viewModel.scrollPosition - 1)
-                        viewModel.isRestoringData = false
+
+                        if (viewModel.isRestoringData) {
+                            viewModel.isRestoringData = false
+                        } else {
+                            viewModel.didOrientationChange = false
+                        }
                     }
                 }
             }
@@ -156,8 +165,8 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
             layoutManager = linearLayoutManager
             addItemDecoration(DividerItemDecoration(context, linearLayoutManager.orientation))
             recyclerViewAdapter = RecyclerViewAdapter(object: Interaction<RecyclerViewModel> {
-                override fun onItemSelected(item: RecyclerViewModel) {
-                    Toast.makeText(context, "Item ${item.content}", Toast.LENGTH_SHORT).show()
+                override fun onItemSelected(item: RecyclerViewModel, position: Int) {
+                    Toast.makeText(context, "Item $position ${item.content}", Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onErrorRefreshPressed() {
@@ -196,7 +205,8 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                     super.onScrolled(recyclerView, dx, dy)
                     val itemCount = linearLayoutManager.itemCount
                     val lastVisibleItemPosition = linearLayoutManager.findLastVisibleItemPosition()
-                    viewModel.setScrollPosition(lastVisibleItemPosition)
+                    val centerScrollPosition = (linearLayoutManager.findLastCompletelyVisibleItemPosition() + linearLayoutManager.findFirstCompletelyVisibleItemPosition()) / 2
+                    viewModel.setScrollPosition(centerScrollPosition)
 
                     if (lastVisibleItemPosition > PAGE_SIZE.plus(PAGE_SIZE.div(2)) && dy <= -75) {
                         binding.fab.show()

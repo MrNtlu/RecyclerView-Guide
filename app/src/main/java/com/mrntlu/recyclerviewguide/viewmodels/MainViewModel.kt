@@ -28,6 +28,7 @@ class MainViewModel(
      * scrollPosition is lastVisibleItem's position on recyclerview
      */
     var isRestoringData = false
+    var didOrientationChange = false
     private var page: Int = savedStateHandle[PAGE_KEY] ?: 1
     var scrollPosition: Int = savedStateHandle[SCROLL_POSITION_KEY] ?: 0
         private set
@@ -47,6 +48,8 @@ class MainViewModel(
 
     private fun restoreData() {
         isRestoringData = true
+
+        var isPaginationExhausted = false
         val tempList = arrayListOf<RecyclerViewModel>()
         viewModelScope.launch(Dispatchers.IO) {
             for (p in 1..page) {
@@ -54,13 +57,14 @@ class MainViewModel(
                     repository.fetchData(p).collect { state ->
                         if (state is NetworkResponse.Success) {
                             tempList.addAll(state.data)
+                            isPaginationExhausted = state.isPaginationExhausted
                         }
                     }
                 }
                 job.join()
             }
             withContext(Dispatchers.Main) {
-                _rvList.value = NetworkResponse.Success(tempList, isPaginationData = true)
+                _rvList.value = NetworkResponse.Success(tempList, isPaginationData = true, isPaginationExhausted = isPaginationExhausted)
             }
         }
     }
@@ -114,9 +118,10 @@ class MainViewModel(
     }
 
     fun exhaustPagination() = viewModelScope.launch(Dispatchers.Main) {
-        _rvList.value = NetworkResponse.Failure(
-            "Pagination Exhaust",
-            true
+        _rvList.value = NetworkResponse.Success(
+            arrayListOf(),
+            isPaginationData = true,
+            isPaginationExhausted = true,
         )
     }
 
@@ -126,7 +131,7 @@ class MainViewModel(
     }
 
     fun setScrollPosition(newPosition: Int) {
-        if (!isRestoringData) {
+        if (!isRestoringData && !didOrientationChange) {
             scrollPosition = newPosition
             savedStateHandle[SCROLL_POSITION_KEY] = newPosition
         }
