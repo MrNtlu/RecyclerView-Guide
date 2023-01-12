@@ -24,14 +24,16 @@ class MainViewModel(
     val rvOperation: LiveData<NetworkResponse<Operation<RecyclerViewModel>>> = _rvOperation
 
     /** Process Death restore
-     * isDataRestored is necessary to handle recyclerview.scrollToPosition
-     * scrollPosition is lastVisibleItem's position on recyclerview
+     * isRestoringData is necessary to handle recyclerview.scrollToPosition
+     * scrollPosition is middle item's position on recyclerview
      */
     var isRestoringData = false
-    var didOrientationChange = false
     private var page: Int = savedStateHandle[PAGE_KEY] ?: 1
     var scrollPosition: Int = savedStateHandle[SCROLL_POSITION_KEY] ?: 0
         private set
+
+    // Variable for detecting orientation change
+    var didOrientationChange = false
 
     init {
         if (page != 1) {

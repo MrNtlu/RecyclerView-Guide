@@ -97,7 +97,11 @@ abstract class BaseAdapter<T>(open val interaction: Interaction<T>): RecyclerVie
         handleDiffUtil(newList as ArrayList<T>)
     }
 
-    fun setData(newList: ArrayList<T>, isPaginationData: Boolean = false, isPaginationExhausted: Boolean = false) {
+    fun setData(
+        newList: ArrayList<T>,
+        isPaginationData: Boolean = false,
+        isPaginationExhausted: Boolean = false
+    ) {
         setState(if (isPaginationExhausted) RecyclerViewEnum.PaginationExhaust else RecyclerViewEnum.View)
 
         if (!isPaginationData) {

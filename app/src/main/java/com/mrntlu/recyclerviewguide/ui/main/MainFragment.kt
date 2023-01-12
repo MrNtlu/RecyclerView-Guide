@@ -205,6 +205,7 @@ class MainFragment : BaseFragment<FragmentMainBinding>() {
                     super.onScrolled(recyclerView, dx, dy)
                     val itemCount = linearLayoutManager.itemCount
                     val lastVisibleItemPosition = linearLayoutManager.findLastVisibleItemPosition()
+
                     val centerScrollPosition = (linearLayoutManager.findLastCompletelyVisibleItemPosition() + linearLayoutManager.findFirstCompletelyVisibleItemPosition()) / 2
                     viewModel.setScrollPosition(centerScrollPosition)
 
