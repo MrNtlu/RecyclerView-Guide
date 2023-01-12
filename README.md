@@ -10,4 +10,4 @@ https://medium.com/proandroiddev/everything-you-need-to-know-about-recyclerview-
 &nbsp;
 
 ### Article 2, Process Death & Orientation Change in RecyclerView
-#Soon
+https://burakdev.medium.com/process-death-orientation-change-in-recyclerview-8f9c902e491b
