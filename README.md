@@ -9,5 +9,7 @@ https://medium.com/proandroiddev/everything-you-need-to-know-about-recyclerview-
 
 &nbsp;
 
+![https://androidweekly.net/issues/issue-553](https://androidweekly.net/issues/issue-553/badge)
+
 ### Article 2, Process Death & Orientation Change in RecyclerView
-https://burakdev.medium.com/process-death-orientation-change-in-recyclerview-8f9c902e491b
+https://medium.com/proandroiddev/process-death-orientation-change-in-recyclerview-8f9c902e491b
